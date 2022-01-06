@@ -25,7 +25,7 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
     std::complex<double>* X = new std::complex<double>[ni*nj];
     std::fill(X, X+ni*nj, std::complex<double>(0.,0.));
 	
-    int rank, size;
+    int rank, size,irow;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -72,7 +72,7 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
         {
           MPI_Recv(&irow, 1, MPI_INT, 0, 101, MPI_COMM_WORLD, &status);
           if (irow != -1)
-          {
+          {                                              // on remplie X à partir des éléments de la ligne irow
             for (std::uint32_t k2 = 0; k2 < nj; ++k2)
         {
             for (std::uint32_t n2 = 0; n2 < irow; ++n2 )
