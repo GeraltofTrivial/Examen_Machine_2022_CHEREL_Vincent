@@ -7,12 +7,6 @@
 #include <algorithm>
 #include <chrono>
 #include "lodepng/lodepng.h"
-#include <cassert>
-#include <iostream>
-#include <thread>
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
 
 struct sparseSpectralComposition 
 {
@@ -21,23 +15,22 @@ struct sparseSpectralComposition
     std::vector<std::uint32_t> ind_cols;
     std::vector<std::complex<double>> coefficients;
 };
-//test
-namespace{
-std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_t height,std::uint32_t szBlock, unsigned char const* pixels )
+
+std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_t height, unsigned char const* pixels )
 {
     constexpr const double pi = 3.14159265358979324;
     std::uint32_t ni = height;
     std::uint32_t nj = width;
     std::complex<double>* X = new std::complex<double>[ni*nj];
     std::fill(X, X+ni*nj, std::complex<double>(0.,0.));
-    for( std::uint32_t k1 = ni; k1 < ni+szBlock; ++k1 )
+    for( std::uint32_t k1 = 0; k1 < ni; ++k1 )
     {
-        for (std::uint32_t k2 = nj; k2 < nj+szBlock; ++k2)
+        for (std::uint32_t k2 = 0; k2 < nj; ++k2)
         {
-            for (std::uint32_t n2 = ni; n2 < ni+szBlock; ++n2 )
+            for (std::uint32_t n2 = 0; n2 < ni; ++n2 )
             {
                 std::complex<double> exp2(std::cos(-2*pi*n2*k2/height), std::sin(-2*pi*n2*k2/height));
-                for (std::uint32_t n1 = nj; n1 < nj+szBlock; ++n1 )
+                for (std::uint32_t n1 = 0; n1 < nj; ++n1 )
                 {
                     std::complex<double> exp1(std::cos(-2*pi*n1*k1/nj), std::sin(-2*pi*n1*k1/nj));
                     X[k1*nj+k2] += double(pixels[3*(n1+n2*nj)])*exp1*exp2;
@@ -47,8 +40,7 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
     }
     return X;
 }
-const std::uint32_t szBlock = 32;
-}
+
 sparseSpectralComposition compressSpectralComposition( std::uint32_t width, std::uint32_t height, const std::complex<double>* plainCoefs, double tauxCompression )
 {
     std::uint32_t nb_coefs = std::uint32_t(tauxCompression*width*height);
@@ -185,7 +177,7 @@ int main(int nargs, char* argv[])
 	
     start = std::chrono::system_clock::now();                                        // debut de l'horloge
 	
-    std::complex<double>* fourier = discretTransformFourier( 0, 0,std::max({width, height}), image );
+    std::complex<double>* fourier = discretTransformFourier( width, height, image );
     un = std::chrono::system_clock::now();                                           // premier arrêt
     std::chrono::duration < double >elapsed_seconds = un - start;
     std::cout << "L’encodage de l’image par DFT prends : " << elapsed_seconds.count() << " secondes\n";
