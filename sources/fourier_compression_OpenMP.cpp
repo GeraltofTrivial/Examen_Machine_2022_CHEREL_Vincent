@@ -21,7 +21,7 @@ struct sparseSpectralComposition
     std::vector<std::uint32_t> ind_cols;
     std::vector<std::complex<double>> coefficients;
 };
-//test
+// on parralélise sur les pixels, on fait des block de taille 32
 namespace{
 std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_t height,std::uint32_t szBlock, unsigned char const* pixels )
 {
