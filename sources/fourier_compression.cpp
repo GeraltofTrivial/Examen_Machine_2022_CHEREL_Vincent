@@ -18,11 +18,81 @@ struct sparseSpectralComposition
 
 std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_t height, unsigned char const* pixels )
 {
+ 	
     constexpr const double pi = 3.14159265358979324;
-    std::uint32_t ni = height;
-    std::uint32_t nj = width;
+    std::uint32_t ni = height;   //ni nombre de ligne
+    std::uint32_t nj = width;    //nj nombre de colonne
     std::complex<double>* X = new std::complex<double>[ni*nj];
     std::fill(X, X+ni*nj, std::complex<double>(0.,0.));
+	
+    int rank, size;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0)// Si je suis le maître
+    {
+      // Je realloue pour le maître
+      std::complex<double>* Xbis = std::complex<double>[ni*nj];
+      
+      /* Je distribue les size-1 premières lignes sur les autres processus */
+      irow = 0;
+      for ( int p = 1; p < size; ++p )
+      {
+        MPI_Send(&irow, 1, MPI_INT, p, 101, MPI_COMM_WORLD);
+        irow ++;
+      }
+	    
+      do// Boucle sur les lignes restantes à distribuer
+      {
+        /* Puis j'attends le résultat d'un esclave avant de lui envoyer une nouvelle ligne à calculer*/
+        MPI_Recv(row.data(), W, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        int jrow, from_who;
+        from_who = status.MPI_SOURCE;
+        jrow     = status.MPI_TAG;
+        MPI_Send(&irow, 1, MPI_INT, from_who, 101, MPI_COMM_WORLD);
+        std::copy(row.data(), row.data()+W, pixels.data() + W*(H-jrow-1));
+        irow++;
+      } while (irow < H);
+      // On n'a plus de lignes à distribuer. On reçoit les dernières lignes et on signales aux esclaves
+      // qu'ils n'ont plus de travail à effectuer
+      irow = -1; // -1 => signal de terminaison
+      for ( int p = 1; p < size; ++p )
+      {
+        MPI_Recv(row.data(), W, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        int jrow, from_who;
+        from_who = status.MPI_SOURCE;
+        jrow     = status.MPI_TAG;
+        MPI_Send(&irow, 1, MPI_INT, from_who, 101, MPI_COMM_WORLD);
+        
+      }
+    } //puis les esclaves
+	else
+    { 
+        do
+        {
+          MPI_Recv(&irow, 1, MPI_INT, 0, 101, MPI_COMM_WORLD, &status);
+          if (irow != -1)
+          {
+            for (std::uint32_t k2 = 0; k2 < nj; ++k2)
+        {
+            for (std::uint32_t n2 = 0; n2 < irow; ++n2 )
+            {
+                std::complex<double> exp2(std::cos(-2*pi*n2*k2/height), std::sin(-2*pi*n2*k2/height));
+                for (std::uint32_t n1 = 0; n1 < nj; ++n1 )
+                {
+                    std::complex<double> exp1(std::cos(-2*pi*n1*k1/nj), std::sin(-2*pi*n1*k1/nj));
+                    X[k1*nj+k2] += double(pixels[3*(n1+n2*nj)])*exp1*exp2;
+                }
+            }
+        }
+		  
+		
+            MPI_Send(row.data(), W, MPI_INT, 0, irow, MPI_COMM_WORLD);
+          }
+        } while (irow != -1);
+    }
+    
     for( std::uint32_t k1 = 0; k1 < ni; ++k1 )
     {
         for (std::uint32_t k2 = 0; k2 < nj; ++k2)
@@ -156,6 +226,16 @@ unsigned char* inversePartialDiscretTransformFourier( sparseSpectralComposition 
 
 int main(int nargs, char* argv[])
 {
+    MPI_Init(&nargs, &argv);
+    int rank, nbp;
+
+    MPI_Comm_rank(MPI_COMM_WORLD,
+                  &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, 
+                  &nbp);
+	
+	
+	
     std::chrono::time_point<std::chrono::system_clock> start, end,un,deux;
 
     std::uint32_t width, height;
