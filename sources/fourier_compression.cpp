@@ -32,8 +32,7 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
 
     if (rank == 0)// Si je suis le maître
     {
-      // Je realloue pour le maître
-      std::complex<double>* Xbis = std::complex<double>[ni*nj];
+      
       
       /* Je distribue les size-1 premières lignes sur les autres processus */
       irow = 0;
@@ -46,12 +45,12 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
       do// Boucle sur les lignes restantes à distribuer
       {
         /* Puis j'attends le résultat d'un esclave avant de lui envoyer une nouvelle ligne à calculer*/
-        MPI_Recv(row.data(), W, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(X.data(), width, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         int jrow, from_who;
         from_who = status.MPI_SOURCE;
         jrow     = status.MPI_TAG;
         MPI_Send(&irow, 1, MPI_INT, from_who, 101, MPI_COMM_WORLD);
-        std::copy(row.data(), row.data()+W, pixels.data() + W*(H-jrow-1));
+        
         irow++;
       } while (irow < H);
       // On n'a plus de lignes à distribuer. On reçoit les dernières lignes et on signales aux esclaves
@@ -59,7 +58,7 @@ std::complex<double>* discretTransformFourier( std::uint32_t width, std::uint32_
       irow = -1; // -1 => signal de terminaison
       for ( int p = 1; p < size; ++p )
       {
-        MPI_Recv(row.data(), W, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(X.data(), width, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         int jrow, from_who;
         from_who = status.MPI_SOURCE;
         jrow     = status.MPI_TAG;
