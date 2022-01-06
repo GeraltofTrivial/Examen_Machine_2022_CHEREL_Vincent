@@ -1,4 +1,4 @@
-Je met les resultat aux questions de temps ici:
+Je met les resultat aux questions de temps (Question 1) ici:
   
   pour small_lena_gray.png mon terminal affiche :
 "cherel@athena08:~/Documents/IN203/examen-machine/Examen_machine_2022/sources$./fourier_compression.exe 
